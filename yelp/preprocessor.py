@@ -31,7 +31,9 @@ class YelpData:
                 idxs.append(sen.name)
         rest_data = df.iloc[idxs]
         cat_list = list(number)
-
+        cat_list.remove('Restaurants')
+        cat_list.remove('Food')
+        
         # one hot encoder
         cat_one_hot = np.zeros((len(rest_data),len(cat_list)))
         for i in range(len(rest_data)):
@@ -43,7 +45,8 @@ class YelpData:
                     import pdb
                     pdb.set_trace()
                 for c in cats:
-                    cat_one_hot[i][cat_list.index(c)] = 1
+                    if c != 'Restaurants' and c != 'Food':
+                        cat_one_hot[i][cat_list.index(c)] = 1
 
         self.rest_data = rest_data
         self.categories = cat_list
