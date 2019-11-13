@@ -1,3 +1,4 @@
+# adding feature test
 import json
 import pandas as pd
 import numpy as np
@@ -20,6 +21,8 @@ class YelpData:
         df = pd.DataFrame(bus_json['business'])
 
         # extract restaurants
+        cities = set()
+#         self.codes = set()
         number = set()
         idxs = []
         for i in range(len(df)):
@@ -28,38 +31,47 @@ class YelpData:
                 continue
             elif 'Restaurants' in sen['categories'] and 'Food' in sen['categories']:
                 number.update(sen['categories'].split(", "))
+                cities.add(sen['city'])
+#                 codes.add(sen['postal_code'])
                 idxs.append(sen.name)
         rest_data = df.iloc[idxs]
-        cat_list = list(number)
+        cat_list = list(cities) + list(number)
         cat_list.remove('Restaurants')
         cat_list.remove('Food')
         self.index_length = len(cat_list)
         
+        word_to_index = {w:i for i,w in enumerate(cat_list)}
         # one hot encoder
         cat_one_hot = np.zeros((len(rest_data), self.index_length))
         for i in range(len(rest_data)):
+            put_city = False
             l = rest_data.iloc[i]
             c_col = l['categories']
             if c_col != None:
-                cats = [c for c in c_col.split(', ')]
-                if "Handyman" in cats:
-                    import pdb
-                    pdb.set_trace()
+                cats = c_col.split(', ')
+#                 cats = [c for c in c_col.split(', ')]
                 for c in cats:
                     if c != 'Restaurants' and c != 'Food':
-                        cat_one_hot[i][cat_list.index(c)] = 1
-
+                        cat_one_hot[i][word_to_index[c]] = 1
+                        put_city =True
+                if put_city:
+                    cat_one_hot[i][word_to_index[l['city']]]
+                
+                
+                
         self.rest_data = rest_data
         self.categories = cat_list
-        self.cat_index = {j:i for i,j in enumerate(cat_list)}
+#         self.cat_index = {j:i for i,j in enumerate(cat_list)}
         self.ratings = rest_data['stars']
         self.cat_one_hot = cat_one_hot
         
     def add_bias(self):
-        cat_one_hot_bias = np.ones((self.cat_one_hot.shape[0],self.cat_one_hot.shape[1]+1))
-        for i in range(len(cat_one_hot_bias)):
-            encoded_cats = self.cat_one_hot[i]
-            cat_one_hot_bias[i][:len(encoded_cats)] = encoded_cats
+        bias = np.ones([self.cat_one_hot.shape[0],1])
+        cat_one_hot_bias = np.concatenate([self.cat_one_hot, bias], axis = 1)
+#         cat_one_hot_bias = np.ones((self.cat_one_hot.shape[0],self.cat_one_hot.shape[1]+1))
+#         for i in range(len(cat_one_hot_bias)):
+#             encoded_cats = self.cat_one_hot[i]
+#             cat_one_hot_bias[i][:len(encoded_cats)] = encoded_cats
         return cat_one_hot_bias
     
     def to_pickle(self, data, name):
