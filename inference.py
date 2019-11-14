@@ -11,9 +11,11 @@ from pyro.infer.mcmc import NUTS
 from preprocessor import to_pickle
 
 
-def mcmc(data, ratings, model, mode="save",model_type):
+def mcmc(data, ratings, model, model_type, mode="save"):
     nuts_kernel = NUTS(model)
     hmc = MCMC(nuts_kernel, num_samples=500, warmup_steps=100)
+    if mode == "save":
+        to_pickle(hmc,"{}_hmc".format(model_type))
     return hmc
 
 def svi(data, ratings, model, guide, epoch):

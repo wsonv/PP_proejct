@@ -5,21 +5,27 @@ import torch
 import pyro.distributions as dist
 from torch.distributions import constraints
 import pyro.optim as optim
-from pyro.infer import SVI,JitTrace_ELBO
+from pyro.infer import EmpiricalMarginal, SVI, Trace_ELBO, JitTrace_ELBO, TracePredictive
 from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS
 from preprocessor import to_pickle
 
 
-def svi_sampling(svi_model, data, ratings, mode="save",model_type)
+def svi_sampling(svi_model, data, ratings, model, model_type, mode="save"):
+    
+    def wrapped_model(data, ratings):
+        pyro.sample("prediction", dist.Delta(model(data, ratings)))
+   
     posterior = svi_model.run(data, ratings)
     sites = ["betas"]
 
     svi_samples = {site: EmpiricalMarginal(posterior, sites=site).
                    enumerate_support().detach().cpu().numpy() 
                    for site in sites}
+    
+   
 
-    get_marginal = lambda traces, sites:EmpiricalMarginal(traces, sites)
+    get_marginal = lambda traces, sites:EmpiricalMarginal(traces, sites) \
                    ._get_samples_and_weights()[0].detach().cpu().numpy()
 
     trace_pred = TracePredictive(wrapped_model,
@@ -31,14 +37,12 @@ def svi_sampling(svi_model, data, ratings, mode="save",model_type)
         to_pickle(marginal,"{}_test_samples".format(model_type))
     return marginal
 
-def wrapped_model(data, ratings, model):
-        pyro.sample("prediction", dist.Delta(model(data, ratings)))
+
         
-def mcmc_posterior():
+def mcmc_posterior(hmc,data,ratings,model_type,mode="save"):
     hmc.run(data,ratings)
     hmc_beta_dict = {k: v.detach().cpu().numpy() for k, v in hmc.get_samples().items()}
     if mode == "save":
-        to_pickle(hmc,"{}_hmc".format(model_type))
         to_pickle(hmc_beta_dict,"{}_hmc_beta_dict".format(model_type))
     return hmc_beta_dict
         
