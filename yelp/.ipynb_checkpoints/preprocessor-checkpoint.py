@@ -11,6 +11,8 @@ class YelpData:
         self.ratings = None
         self.cat_one_hot = None
         self.index_length = None
+        self.cities_to_include = ['Toronto', 'Las Vegas', ' Phoenix', 'Charlotte' ,'Calgary', 
+                                  'Montréal','Pittsburgh', 'Scottsdale','Cleveland','Mesa']
 
     def process(self):
         # load json file to dataframe
@@ -21,17 +23,22 @@ class YelpData:
         df = pd.DataFrame(bus_json['business'])
 
         # extract restaurants
+        cities_num = {}
         cities = set()
 #         self.codes = set()
         number = set()
         idxs = []
         for i in range(len(df)):
             sen = df.iloc[i]
-            if sen['categories'] is None:
+            if sen['categories'] is None or sen['city'] not in self.cities_to_include:
                 continue
             elif 'Restaurants' in sen['categories'] and 'Food' in sen['categories']:
                 number.update(sen['categories'].split(", "))
                 cities.add(sen['city'])
+#                 if sen['city'] in cities_num:
+#                     cities_num[sen['city']] += 1
+#                 else:
+#                     cities_num[sen['city']] = 1
 #                 codes.add(sen['postal_code'])
                 idxs.append(sen.name)
         rest_data = df.iloc[idxs]
@@ -58,7 +65,7 @@ class YelpData:
                     cat_one_hot[i][word_to_index[l['city']]]
                 
                 
-                
+        self.cities_num = cities_num
         self.rest_data = rest_data
         self.categories = cat_list
 #         self.cat_index = {j:i for i,j in enumerate(cat_list)}
@@ -73,15 +80,7 @@ class YelpData:
 #             encoded_cats = self.cat_one_hot[i]
 #             cat_one_hot_bias[i][:len(encoded_cats)] = encoded_cats
         return cat_one_hot_bias
-    
-    def to_pickle(self, data, name):
-        with open(name, "wb") as f:
-            pickle.dump(data, f)
-    
-    def load(self, name):
-        with open(name, "rb") as f:
-            data = pickle.load(f)
-        return data
+
     
     def get_vector(self, cats, index_list = None):
         if index_list:
@@ -96,3 +95,12 @@ class YelpData:
         #adding bias
         res[0][-1] = 1
         return res
+    
+def to_pickle(data, name):
+    with open(name, "wb") as f:
+        pickle.dump(data, f)
+    
+def load(name):
+    with open(name,"rb") as f:
+        data = pickle.load(f)
+    return data
