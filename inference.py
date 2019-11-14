@@ -1,4 +1,3 @@
-# adding feature test
 import numpy as np
 import pickle
 import pyro
@@ -12,37 +11,25 @@ from pyro.infer.mcmc import NUTS
 from preprocessor import to_pickle
 
 
-def svi_sampling(svi_model, data, ratings)
-    posterior = svi_model.run(data, ratings)
-    sites = ["betas"]
+def mcmc(data, ratings, model, mode="save",model_type):
+    nuts_kernel = NUTS(model)
+    hmc = MCMC(nuts_kernel, num_samples=500, warmup_steps=100)
+    return hmc
 
-    svi_samples = {site: EmpiricalMarginal(posterior, sites=site).
-                   enumerate_support().detach().cpu().numpy() 
-                   for site in sites}
+def svi(data, ratings, model, guide, epoch):
+    svi_model = SVI(model, 
+                    guide, 
+                    optim.Adam({"lr": .005}), 
+                    loss=JitTrace_ELBO(), 
+                    num_samples=500)
 
-get_marginal = lambda traces, sites:EmpiricalMarginal(traces, sites)._get_samples_and_weights()[0].detach().cpu().numpy()
-def wrapped_model(data, ratings):
-    pyro.sample("prediction", dist.Delta(model(data, ratings)))
-trace_pred = TracePredictive(wrapped_model,
-                             posterior,
-                             num_samples=500)
-post_pred = trace_pred.run(data, None)
-marginal = get_marginal(post_pred, ["prediction"])
+    pyro.clear_param_store()
+    loss_list = []
+    for i in range(epoch):
+        ELBO = svi_model.step(data, ratings)
+        if i % 500 == 0:
+            print(ELBO)
+            loss_list.append(ELBO)
+    
+    return svi_model,loss_list
 
-
-
-        svi_samples = {site: EmpiricalMarginal(posterior, sites=site)
-                             .enumerate_support().detach().cpu().numpy()
-                       for site in sites}
-
-        get_marginal = lambda traces, 
-                       sites:EmpiricalMarginal(traces, sites)._get_samples_and_weights()[0].detach().cpu().numpy()
-       
-        trace_pred = TracePredictive(wrapped_model,
-                                     posterior,
-                                     num_samples=500)
-        post_pred = trace_pred.run(data, None)
-        marginal = get_marginal(post_pred, ["prediction"])
-
-def wrapped_model(data, ratings, model):
-        pyro.sample("prediction", dist.Delta(model(data, ratings)))
