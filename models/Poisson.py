@@ -11,12 +11,12 @@ from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS
 from preprocessor import to_pickle
 
-class PossModel:
+class Pois:
     
     def model(self, data, ratings):
 
-        with pyro.plate("betas", num_features + 1):
-            betas = pyro.sample("beta", dist.Gamma(1,1))
+        with pyro.plate("betas", data.shape[1]):
+            betas = pyro.sample("beta", dist.Normal(0,1))
             
         lambda_ = torch.exp(torch.sum(betas * data,axis=1))
         with pyro.plate("ratings", data.shape[0]):
@@ -25,9 +25,14 @@ class PossModel:
         return y
     
     def guide(self, data, ratings):
-        alphas_0 = pyro.param('weights_loc', torch.ones(data.shape[1]),  constraint=constraints.positive)
-        alphas_1 = pyro.param('weights_scale', torch.ones(data.shape[1]), constraint=constraints.positive)               
+        locs = pyro.param('weights_loc', torch.ones(data.shape[1]))
+        scales = pyro.param('weights_scale', torch.ones(data.shape[1]), constraint=constraints.positive)               
 
         with pyro.plate("betas", data.shape[1]):
-            betas = pyro.sample("beta", dist.Gamma(alphas_0, alphas_1))
+            betas = pyro.sample("beta", dist.Normal(locs, scales))
 
+    def process_ratings(self, ratings):
+        return ratings * 2 - 1
+    
+    def unprocess_ratings(self, ratings):
+        return (ratings + 1)/2

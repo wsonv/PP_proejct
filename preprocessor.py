@@ -11,8 +11,7 @@ class YelpData:
         self.ratings = None
         self.cat_one_hot = None
         self.index_length = None
-        self.cities_to_include = ['Toronto', 'Las Vegas', ' Phoenix', 'Charlotte' ,'Calgary', 
-                                  'Montréal','Pittsburgh', 'Scottsdale','Cleveland','Mesa']
+        self.cities_to_include = ['Toronto', 'Las Vegas', ' Phoenix', 'Charlotte' ,'Calgary', 'Montréal','Pittsburgh', 'Scottsdale','Cleveland','Mesa']
 
     def process(self):
         # load json file to dataframe
@@ -22,27 +21,46 @@ class YelpData:
         bus_json = {"business":business}
         df = pd.DataFrame(bus_json['business'])
 
-        # extract restaurants
-        cities_num = {}
-        cities = set()
-#         self.codes = set()
-        number = set()
-        idxs = []
+        cat_counts = {}
         for i in range(len(df)):
             sen = df.iloc[i]
             if sen['categories'] is None or sen['city'] not in self.cities_to_include:
                 continue
             elif 'Restaurants' in sen['categories'] and 'Food' in sen['categories']:
-                number.update(sen['categories'].split(", "))
-                cities.add(sen['city'])
-#                 if sen['city'] in cities_num:
-#                     cities_num[sen['city']] += 1
-#                 else:
-#                     cities_num[sen['city']] = 1
-#                 codes.add(sen['postal_code'])
-                idxs.append(sen.name)
+                cats = sen['categories'].split(", ")
+                for word in cats:
+                    if word in cat_counts:
+                        cat_counts[word] += 1
+                    else:
+                        cat_counts[word] = 1
+
+        ordered_cat_counts = [[c,w] for w, c in cat_counts.items()]
+        ordered_cat_counts.sort()
+        uncensored_cats_list = np.array(ordered_cat_counts)[:,1]
+        censoring = uncensored_cats_list[:228]
+        censored = uncensored_cats_list[228:]
+        censor_dict = {x:0 for x in censoring}
+        
+        idxs = []
+        cities = set()
+        for i in range(len(df)):
+            sen = df.iloc[i]
+            if sen['categories'] is None or sen['city'] not in self.cities_to_include:
+                continue
+            elif 'Restaurants' in sen['categories'] and 'Food' in sen['categories']:
+#                 number.update(cats)
+                cats = sen['categories'].split(", ")
+                is_pass = False
+                for word in cats:
+                    if word in censor_dict:
+                        is_pass = True
+                if not is_pass:
+                    cities.add(sen['city'])
+                    idxs.append(sen.name)
         rest_data = df.iloc[idxs]
-        cat_list = list(cities) + list(number)
+        
+        cat_list = list(cities) + censored.tolist()
+        
         cat_list.remove('Restaurants')
         cat_list.remove('Food')
         self.index_length = len(cat_list)
@@ -64,14 +82,14 @@ class YelpData:
                 if put_city:
                     cat_one_hot[i][word_to_index[l['city']]]
                 
-                
-        self.cities_num = cities_num
+        self.cat_counts = cat_counts
+#         self.cities_num = cities_num
         self.rest_data = rest_data
         self.categories = cat_list
 #         self.cat_index = {j:i for i,j in enumerate(cat_list)}
         self.ratings = rest_data['stars']
         self.cat_one_hot = cat_one_hot
-        
+
     def add_bias(self):
         bias = np.ones([self.cat_one_hot.shape[0],1])
         cat_one_hot_bias = np.concatenate([self.cat_one_hot, bias], axis = 1)
@@ -80,7 +98,6 @@ class YelpData:
 #             encoded_cats = self.cat_one_hot[i]
 #             cat_one_hot_bias[i][:len(encoded_cats)] = encoded_cats
         return cat_one_hot_bias
-
     
     def get_vector(self, cats, index_list = None):
         if index_list:
@@ -95,12 +112,12 @@ class YelpData:
         #adding bias
         res[0][-1] = 1
         return res
-    
+
 def to_pickle(data, name):
     with open(name, "wb") as f:
         pickle.dump(data, f)
     
 def load(name):
-    with open(name,"rb") as f:
+    with open(name, "rb") as f:
         data = pickle.load(f)
-    return data
+    return data    

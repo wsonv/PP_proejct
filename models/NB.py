@@ -11,7 +11,7 @@ from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS
 from preprocessor import to_pickle
 
-class PossModel:
+class NeB:
     
     def model(self, data, ratings):
 
