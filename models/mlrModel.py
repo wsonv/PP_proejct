@@ -8,22 +8,28 @@ from pyro.infer import SVI,JitTrace_ELBO
 from pyro.infer.mcmc.api import MCMC
 from pyro.infer.mcmc import NUTS
 
+
 class MlrModel:
 
     def model(self, data, ratings):
         #make one-hot vector length betas
-        mu = 0
+        mu = torch.rand((8,data.shape[1]),dtype=torch.float)
+        mu[4] /= 10
+        mu[5] /= 10
+        mu[6] /= 10
+        mu[1] *= 2
+        mu[2] *= 2
         sigma = 1
         with pyro.plate("betas", data.shape[1]):
 
-            beta_1 = pyro.sample("beta_1", dist.Normal(mu, sigma))
-            beta_1h = pyro.sample("beta_1h", dist.Normal(mu, sigma))
-            beta_2 = pyro.sample("beta_2", dist.Normal(mu, sigma))
-            beta_2h = pyro.sample("beta_2h", dist.Normal(mu, sigma))
-            beta_3 = pyro.sample("beta_3", dist.Normal(mu, sigma))
-            beta_3h = pyro.sample("beta_3h", dist.Normal(mu, sigma))
-            beta_4 = pyro.sample("beta_4", dist.Normal(mu, sigma))
-            beta_4h = pyro.sample("beta_4h", dist.Normal(mu, sigma))
+            beta_1 = pyro.sample("beta_1", dist.Normal(mu[0], sigma))
+            beta_1h = pyro.sample("beta_1h", dist.Normal(mu[1], sigma))
+            beta_2 = pyro.sample("beta_2", dist.Normal(mu[2], sigma))
+            beta_2h = pyro.sample("beta_2h", dist.Normal(mu[3], sigma))
+            beta_3 = pyro.sample("beta_3", dist.Normal(mu[4], sigma))
+            beta_3h = pyro.sample("beta_3h", dist.Normal(mu[5], sigma))
+            beta_4 = pyro.sample("beta_4", dist.Normal(mu[6], sigma))
+            beta_4h = pyro.sample("beta_4h", dist.Normal(mu[7], sigma))
             #beta_5 = pyro.sample("beta_5", dist.Normal(mu, sigma))
         p_1 = torch.sum(beta_1 * data,axis=1)
         p_1h = torch.sum(beta_1h * data,axis=1)
@@ -90,18 +96,22 @@ class MlrModel:
     
     
     def guide(self, data, ratings):
-        sigma = pyro.param('signma', torch.ones(data.shape[1]),  constraint=constraints.positive)
-        mu = pyro.param('mu', torch.ones(data.shape[1]))        
-       
+        sigma = pyro.param('sigma', torch.rand(data.shape[1]),  constraint=constraints.positive)
+#         mu = pyro.param('mu', torch.zeros(data.shape[1]))     
+        
+        #mu = pyro.param('mu', torch.rand(data.shape[1]))        
+        mu = pyro.param('mu', torch.rand((8,data.shape[1]),dtype=torch.float))
+        print(mu)
+        
 
         with pyro.plate("betas", data.shape[1]):
-            beta_1 = pyro.sample("beta_1", dist.Normal(mu, sigma))
-            beta_1h = pyro.sample("beta_1h", dist.Normal(mu, sigma))
-            beta_2 = pyro.sample("beta_2", dist.Normal(mu, sigma))
-            beta_2h = pyro.sample("beta_2h", dist.Normal(mu, sigma))
-            beta_3 = pyro.sample("beta_3", dist.Normal(mu, sigma))
-            beta_3h = pyro.sample("beta_3h", dist.Normal(mu, sigma))
-            beta_4 = pyro.sample("beta_4", dist.Normal(mu, sigma))
-            beta_4h = pyro.sample("beta_4h", dist.Normal(mu, sigma))
-    
-    
+            beta_1 = pyro.sample("beta_1", dist.Normal(mu[0], sigma))
+            beta_1h = pyro.sample("beta_1h", dist.Normal(mu[1], sigma))
+            beta_2 = pyro.sample("beta_2", dist.Normal(mu[2], sigma))
+            beta_2h = pyro.sample("beta_2h", dist.Normal(mu[3], sigma))
+            beta_3 = pyro.sample("beta_3", dist.Normal(mu[4], sigma))
+            beta_3h = pyro.sample("beta_3h", dist.Normal(mu[5], sigma))
+            beta_4 = pyro.sample("beta_4", dist.Normal(mu[6], sigma))
+            beta_4h = pyro.sample("beta_4h", dist.Normal(mu[7], sigma))
+            
+        

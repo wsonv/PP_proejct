@@ -34,7 +34,8 @@ def svi_sampling(svi_model, data, ratings, model, model_type, mode="save"):
     post_pred = trace_pred.run(data, None)
     marginal = get_marginal(post_pred, ["prediction"])
     if mode == "save":
-        to_pickle(marginal,"{}_test_samples".format(model_type))
+        to_pickle(marginal,"data_pickle/{}/{}_svi_samples".format(model_type, model_type))
+        to_pickle(svi_samples,"data_pickle/{}/{}_svi_beta_dict".format(model_type, model_type))
     return marginal
 
 
@@ -43,7 +44,7 @@ def mcmc_posterior(hmc,data,ratings,model_type,mode="save"):
     hmc.run(data,ratings)
     hmc_beta_dict = {k: v.detach().cpu().numpy() for k, v in hmc.get_samples().items()}
     if mode == "save":
-        to_pickle(hmc_beta_dict,"{}_hmc_beta_dict".format(model_type))
+        to_pickle(hmc_beta_dict,"{}_mcmc_beta_dict".format(model_type))
     return hmc_beta_dict
         
 def mlr_mcmc_sampling(betas, data, mode="save"):
@@ -71,6 +72,6 @@ def mlr_mcmc_sampling(betas, data, mode="save"):
 
     y = pyro.sample("obs", dist.Categorical(probs=softmax_array))
     if mode == "save":
-        to_pickle(y,"mlr_test_samples")
+        to_pickle(y,"mlr_mcmc_samples")
     return y
     
