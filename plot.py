@@ -25,9 +25,9 @@ from pyro.infer.autoguide import init_to_feasible
 def plot_loss(loss_list):
     ax = sns.lineplot(y=loss_list,x=range(1,len(loss_list)+1))
 
-def plot_count_dist(samples,train_ratings,model_type,infer_type,mode="save"):
+def plot_count_dist(samples,train_ratings,model_type,infer_type,mode="save", is_cuda = False):
     samples = np.squeeze(samples)
-    sample_dict = process_ppc_data(samples)
+    sample_dict = process_ppc_data(samples, is_cuda)
     fig, axs = plt.subplots(nrows=3, ncols=3, figsize=(18, 15))
     for i, ax in enumerate(axs.reshape(-1)):
         sns.distplot(sample_dict[i],ax=ax)
@@ -36,14 +36,20 @@ def plot_count_dist(samples,train_ratings,model_type,infer_type,mode="save"):
     if mode == "save":
         to_pickle(sample_dict,"{}_{}_sample_count_dict".format(model_type,infer_type))
 
-def process_ppc_data(samples):
+def process_ppc_data(samples,is_cuda = False):
     sample_dict = dict()
     for r in range(9):
         sample_dict[r]=[]
-
-    for i in range(samples.shape[0]):
-        for j in range(9):
-            sample_dict[j].append(len([ k for k in samples[i] if k == j]))
+    for i in range(9):
+      temp = ((samples == i)*1).sum(axis = 1)
+      if is_cuda:
+        temp = temp.detach().cpu().numpy()
+      else:
+        temp = temp.detach().numpy()
+      sample_dict[i] = temp
+    # for i in range(samples.shape[0]):
+    #     for j in range(9):
+    #         sample_dict[j].append(len([ k for k in samples[i] if k == j]))
     return sample_dict
         
 
@@ -60,8 +66,8 @@ def process_ppc_data(samples):
 #         sns.distplot(sample_data_ave,label="{}".format(s),rug=True, hist=False,kde_kws={"shade": True},color=color[i])
 
 def plot_rating_dist(samples,train_ratings):
-    import pdb
-    pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
     
     samples = np.squeeze(samples)
     rating_index_dict = dict()

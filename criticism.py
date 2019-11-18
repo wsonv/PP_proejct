@@ -47,15 +47,26 @@ def mcmc_posterior(hmc,data,ratings,model_type,mode="save"):
         to_pickle(hmc_beta_dict,"{}_mcmc_beta_dict".format(model_type))
     return hmc_beta_dict
         
-def mlr_mcmc_sampling(betas, data, mode="save"):
-    p_1 = torch.matmul(torch.from_numpy(betas['beta_1']),data.T)
-    p_1h = torch.matmul(torch.from_numpy(betas['beta_1h']),data.T)
-    p_2 = torch.matmul(torch.from_numpy(betas['beta_2']), data.T)
-    p_2h = torch.matmul(torch.from_numpy(betas['beta_2h']), data.T)
-    p_3 = torch.matmul(torch.from_numpy(betas['beta_3']), data.T)
-    p_3h = torch.matmul(torch.from_numpy(betas['beta_3h']), data.T)
-    p_4 = torch.matmul(torch.from_numpy(betas['beta_4']), data.T)
-    p_4h = torch.matmul(torch.from_numpy(betas['beta_4h']), data.T)
+def mlr_mcmc_sampling(betas, data, mode="save",is_cuda = False):
+    if is_cuda:
+      p_1 = torch.matmul(betas['beta_1'],data.T)
+      p_1h = torch.matmul(betas['beta_1h'],data.T)
+      p_2 = torch.matmul(betas['beta_2'], data.T)
+      p_2h = torch.matmul(betas['beta_2h'], data.T)
+      p_3 = torch.matmul(betas['beta_3'], data.T)
+      p_3h = torch.matmul(betas['beta_3h'], data.T)
+      p_4 = torch.matmul(betas['beta_4'], data.T)
+      p_4h = torch.matmul(betas['beta_4h'], data.T)
+
+    else:
+      p_1 = torch.matmul(torch.from_numpy(betas['beta_1']),data.T)
+      p_1h = torch.matmul(torch.from_numpy(betas['beta_1h']),data.T)
+      p_2 = torch.matmul(torch.from_numpy(betas['beta_2']), data.T)
+      p_2h = torch.matmul(torch.from_numpy(betas['beta_2h']), data.T)
+      p_3 = torch.matmul(torch.from_numpy(betas['beta_3']), data.T)
+      p_3h = torch.matmul(torch.from_numpy(betas['beta_3h']), data.T)
+      p_4 = torch.matmul(torch.from_numpy(betas['beta_4']), data.T)
+      p_4h = torch.matmul(torch.from_numpy(betas['beta_4h']), data.T)
 
     p_array = torch.exp(torch.stack([p_1,p_1h,p_2,p_2h,p_3,p_3h,p_4,p_4h], axis=1))
     exp_sum = torch.sum(p_array,axis=1)
@@ -69,9 +80,15 @@ def mlr_mcmc_sampling(betas, data, mode="save"):
     last_par = torch.unsqueeze(1 - temp_total, dim = 1)
     last_par[last_par < 0] = 0
     softmax_array = torch.cat([softmax_array, last_par], axis = 1).transpose(1,2)
-
-    y = pyro.sample("obs", dist.Categorical(probs=softmax_array))
+    mci = softmax_array.mean(axis = 0)
+    initial = True
+    for i in range(300):
+      if initial:
+        initial = False
+        y = torch.unsqueeze(pyro.sample("obs", dist.Categorical(probs=mci)),axis = 0)
+      else:
+        y = torch.cat([y, torch.unsqueeze(pyro.sample("obs", dist.Categorical(probs=mci)),axis = 0)],axis=0)
     if mode == "save":
-        to_pickle(y,"mlr_mcmc_samples")
+      to_pickle(y,"mlr_mcmc_samples")
     return y
     

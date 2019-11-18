@@ -12,8 +12,8 @@ from preprocessor import to_pickle
 
 
 def mcmc(data, ratings, model, model_type, mode="save"):
-    nuts_kernel = NUTS(model)
-    hmc = MCMC(nuts_kernel, num_samples=500, warmup_steps=100)
+    nuts_kernel = NUTS(model, jit_compile = True)
+    hmc = MCMC(nuts_kernel, num_samples=300, warmup_steps=200)
     if mode == "save":
         to_pickle(hmc,"{}_hmc".format(model_type))
     return hmc
@@ -39,7 +39,7 @@ def svi(data, ratings, model, guide, epoch):
                     guide, 
                     optim.Adam({"lr": .005}), 
                     loss=elbo, 
-                    num_samples=500)
+                    num_samples=300)
 
     pyro.clear_param_store()
     loss_list = []
