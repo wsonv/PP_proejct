@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import criticism, inference
 from inference import svi
-from criticism import svi_sampling
+from criticism import svi_posterior, mcmc_posterior, mlr_sampling
 import pyro
 import pyro.distributions as dist
 import pyro.optim as optim
@@ -25,7 +25,7 @@ from pyro.infer.autoguide import init_to_feasible
 def plot_loss(loss_list):
     ax = sns.lineplot(y=loss_list,x=range(1,len(loss_list)+1))
 
-def plot_count_dist(samples,train_ratings,model_type,infer_type,mode="save", is_cuda = False):
+def plot_count_dist(samples,train_ratings,is_cuda = False):
     samples = np.squeeze(samples)
     sample_dict = process_ppc_data(samples, is_cuda)
     fig, axs = plt.subplots(nrows=3, ncols=3, figsize=(18, 15))
@@ -33,20 +33,20 @@ def plot_count_dist(samples,train_ratings,model_type,infer_type,mode="save", is_
         sns.distplot(sample_dict[i],ax=ax)
         ax.axvline(len([ k for k in train_ratings if k == i ]), 0,1,color='r')
         ax.set_title("{} star".format(i/2+1))
-    if mode == "save":
-        to_pickle(sample_dict,"{}_{}_sample_count_dict".format(model_type,infer_type))
+#     if mode == "save":
+#         to_pickle(sample_dict,"{}_{}_sample_count_dict".format(model_type,infer_type))
 
 def process_ppc_data(samples,is_cuda = False):
     sample_dict = dict()
     for r in range(9):
         sample_dict[r]=[]
     for i in range(9):
-      temp = ((samples == i)*1).sum(axis = 1)
-      if is_cuda:
-        temp = temp.detach().cpu().numpy()
-      else:
-        temp = temp.detach().numpy()
-      sample_dict[i] = temp
+        temp = ((samples == i)*1).sum(axis = 1)
+        if is_cuda:
+            temp = temp.detach().cpu().numpy()
+        else:
+            temp = temp.detach().numpy()
+        sample_dict[i] = temp
     # for i in range(samples.shape[0]):
     #     for j in range(9):
     #         sample_dict[j].append(len([ k for k in samples[i] if k == j]))
@@ -82,7 +82,24 @@ def plot_rating_dist(samples,train_ratings):
         sample_data_in_star = sample_data/2 + 1
         sample_data_ave = np.average(sample_data_in_star,axis=1)
         sns.distplot(sample_data_ave,label="{}".format(i/2+1),rug=True, hist=False,kde_kws={"shade":True},color=color[i])
+        
+def plot_beta_value(betas):
+    res = np.zeros([1,3])
+    count = 0
+    for k,w in betas.items():
+        for i in range(w.shape[1]):
 
+            temp_1 = np.ones([w.shape[0],1]) * i
+            temp_3 = np.ones([w.shape[0],1]) * count
+            temp_2 = np.expand_dims(w[:,i],axis =1)
+            tmp_res = np.concatenate([temp_1.astype(int),temp_2,temp_3.astype(int)],axis = 1)
+            res = np.concatenate([res,tmp_res], axis = 0)
+        count += 1
+    res = res[1:]
+    df_beta = pd.DataFrame(res, columns = ["category_index","beta_value","beta_index"])
+    plt.subplots(figsize=(20, 6))
+    ax = sns.lineplot(x="category_index", y="beta_value", hue="beta_index", data=df_beta, ci=None)
+    
 
 def plot_data_heatmap(rest_data,top_number=30):
     ###### Build up Heatmap ######

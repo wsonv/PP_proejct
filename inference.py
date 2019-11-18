@@ -11,14 +11,14 @@ from pyro.infer.mcmc import NUTS
 from preprocessor import to_pickle
 
 
-def mcmc(data, ratings, model, model_type, mode="save"):
+def mcmc(data, ratings, model, model_type, if_save=True):
     nuts_kernel = NUTS(model, jit_compile = True)
     hmc = MCMC(nuts_kernel, num_samples=300, warmup_steps=200)
-    if mode == "save":
-        to_pickle(hmc,"{}_hmc".format(model_type))
+    if if_save:
+        to_pickle(hmc,"data_pickle/{}_mcmc_model".format(model_type))
     return hmc
 
-def svi(data, ratings, model, guide, epoch):
+def svi(data, ratings, model, guide, epoch, model_type, if_save=True, if_print = True):
 #     svi_model = SVI(model, 
 #                     guide, 
 #                     optim.Adam({"lr": .005}), 
@@ -48,9 +48,10 @@ def svi(data, ratings, model, guide, epoch):
         
         if i % 100 == 0:
             loss_list.append(ELBO)
-        if i % 500 == 0:
+        if i % 500 == 0 and if_print:
             print(ELBO)
-
+    if if_save:
+        to_pickle(loss_list,"data_pickle/{}_svi_loss".format(model_type))
     return svi_model, loss_list
 
 

@@ -85,8 +85,8 @@ class MlrModel:
         # mu_3h =  torch.from_numpy(np.average(beta_dict['beta_3h'],axis = 0)).cuda()
         # mu_4 = torch.from_numpy(np.average(beta_dict['beta_4'],axis = 0)).cuda()
         # mu_4h =  torch.from_numpy(np.average(beta_dict['beta_4h'],axis = 0)).cuda()
-        mu = torch.zeros(8)
-        sigma = torch.ones(8)
+        mu = torch.zeros(9)
+        sigma = torch.ones(9)
         with pyro.plate("betas", data.shape[1]):
 
             beta_1 = pyro.sample("beta_1", dist.Normal(mu[0], sigma[0]))
@@ -97,7 +97,7 @@ class MlrModel:
             beta_3h = pyro.sample("beta_3h", dist.Normal(mu[5], sigma[5]))
             beta_4 = pyro.sample("beta_4", dist.Normal(mu[6], sigma[6]))
             beta_4h = pyro.sample("beta_4h", dist.Normal(mu[7], sigma[7]))
-            #beta_5 = pyro.sample("beta_5", dist.Normal(mu, sigma))
+            beta_5 = pyro.sample("beta_5", dist.Normal(mu[8], sigma[8]))
         p_1 = torch.sum(beta_1 * data,axis=1)
         p_1h = torch.sum(beta_1h * data,axis=1)
         p_2 = torch.sum(beta_2 * data,axis=1)
@@ -106,16 +106,23 @@ class MlrModel:
         p_3h = torch.sum(beta_3h * data,axis=1)
         p_4 = torch.sum(beta_4 * data,axis=1)
         p_4h = torch.sum(beta_4h * data,axis=1)
-        #p_5 = torch.sum(beta_5 * data,axis=1)
+        p_5 = torch.sum(beta_5 * data,axis=1)
 
-        p_array = torch.stack([p_1,p_1h,p_2,p_2h,p_3,p_3h,p_4,p_4h])
+        p_array = torch.stack([p_1,p_1h,p_2,p_2h,p_3,p_3h,p_4,p_4h,p_5])
         exp_sum = torch.sum(torch.exp(p_array),axis=0)
 
-        softmax_array=(torch.exp(p_array) / (1+exp_sum))
+        ########## only 8 #############
+#         softmax_array=(torch.exp(p_array) / (1+exp_sum))
+#         temp_total = torch.sum(softmax_array, axis = 0)
+#         last_par = torch.unsqueeze(1 - temp_total, dim = 0)
+#         last_par[last_par < 0] = 0
+#         softmax_array = torch.cat([softmax_array, last_par], axis = 0).T
+        
+        
+        ######### 9 ########
+        softmax_array= torch.exp(p_array) / exp_sum
         temp_total = torch.sum(softmax_array, axis = 0)
-        last_par = torch.unsqueeze(1 - temp_total, dim = 0)
-        last_par[last_par < 0] = 0
-        softmax_array = torch.cat([softmax_array, last_par], axis = 0).T
+        softmax_array = softmax_array.T
 
         with pyro.plate("ratings", data.shape[0]):
             y = pyro.sample("obs", dist.Categorical(probs=softmax_array), obs = ratings)
@@ -200,8 +207,8 @@ class MlrModel:
         # to_deduct[-1] = to_deduct[2]
         # mu = mu + to_deduct
         # sigma = pyro.param('sigma', torch.ones(8,data.shape[1]),  constraint=constraints.positive)*2
-        mu = pyro.param("mu", torch.zeros(8, data.shape[1]))
-        sigma = pyro.param('sigma', torch.ones(8,data.shape[1]),  constraint=constraints.positive)
+        mu = pyro.param("mu", torch.zeros(9, data.shape[1]))
+        sigma = pyro.param('sigma', torch.ones(9,data.shape[1]),  constraint=constraints.positive)
 
         with pyro.plate("betas", data.shape[1]):
             # mu = pyro.param("mu", torch.tensor(0.))
@@ -214,8 +221,9 @@ class MlrModel:
             beta_3h = pyro.sample("beta_3h", dist.Normal(mu[5], sigma[5]))
             beta_4 = pyro.sample("beta_4", dist.Normal(mu[6], sigma[6]))
             beta_4h = pyro.sample("beta_4h", dist.Normal(mu[7], sigma[7]))
+            beta_5 = pyro.sample("beta_5", dist.Normal(mu[8], sigma[8]))
 
-
+            
 
 
 
